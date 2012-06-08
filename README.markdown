@@ -12,7 +12,17 @@ This is a plugin for implementing an OAuth Server/Provider in CakePHP, built on 
 ## Requirements
 [CakePHP 2.x](http://cakephp.org/)
 
+
 A clone of [oauth2-php][1] in your Vendors folder
+### Cloning oauth2-php
+```
+$ git clone git://github.com/quizlet/oauth2-php.git Vendor/oauth2-php
+```
+Or via submodule:
+
+```
+$ git submodule add git://github.com/quizlet/oauth2-php.git Vendor/oauth2-php
+```
 
 ## Installation
 
@@ -33,12 +43,12 @@ $ cake Migrations.migration all --plugin OAuth
 Then clone this repo into a "OAuth" folder in your Plugins folder:
 
 ```
-$ git clone git://github.com/simkimsia/cakephp-oauth-server.git Plugin/OAuth
+$ git clone git://github.com/seddonmedia/cakephp-oauth-server.git Plugin/OAuth
 ```
 Or via submodule:
 
 ```
-$ git submodule add git://github.com/simkimsia/cakephp-oauth-server.git Plugin/OAuth
+$ git submodule add git://github.com/seddonmedia/cakephp-oauth-server.git Plugin/OAuth
 ```
 
 ### Loading the Plugin
@@ -109,9 +119,9 @@ Array(
 )
 ```
 
-The method includes various schemes for generating client id's, [pick your favourite](https://github.com/simkimsia/cakephp-oauth-server/blob/master/Model/Client.php#L122).
+The method includes various schemes for generating client id's, [pick your favourite](https://github.com/seddonmedia/cakephp-oauth-server/blob/master/Model/Client.php#L122).
 
-**NOTE:** This convenience method will generate a random client secret __and hash it__ for security before storage. Although it will pass back the actual raw client secret when you first add a new client, it is not possible to ever determine this from the hash stored in the database. So if the client forgets their secret, [a new one will have to be issued](https://github.com/simkimsia/cakephp-oauth-server/blob/master/Model/Client.php#L139).
+**NOTE:** This convenience method will generate a random client secret __and hash it__ for security before storage. Although it will pass back the actual raw client secret when you first add a new client, it is not possible to ever determine this from the hash stored in the database. So if the client forgets their secret, [a new one will have to be issued](https://github.com/seddonmedia/cakephp-oauth-server/blob/master/Model/Client.php#L139).
 
 
 ### Included Endpoints
