@@ -1,0 +1,38 @@
+*.kpf
+.idea
+pmip
+*.tmproj
+.DS_Store
+*.DS_Store
+tags
+
+
+/plugins
+/vendors
+tags
+
+## Config files
+storyzer/Config/database.php
+storyzer/Config/core.php
+
+## images files in uploads
+storyzer/webroot/uploads/story_images/*
+storyzer/webroot/uploads/story_files/*
+
+## Tempoarary files
+app/tmp
+storyzer/tmp/cache/models/myapp_cake_*
+storyzer/tmp/cache/persistent/myapp_cake_*
+storyzer/tmp/cache/views/myapp_cake_*
+storyzer/tmp/logs/*.log
+storyzer/tmp/sessions/myapp_cake_*
+storyzer/tmp/tests/myapp_cake_*
+
+lib/Cake/Console/Templates/skel/tmp/cache/models/myapp_cake_*
+lib/Cake/Console/Templates/skel/tmp/cache/persistent/myapp_cake_*
+lib/Cake/Console/Templates/skel/tmp/cache/views/myapp_cake_*
+lib/Cake/Console/Templates/skel/tmp/logs/*.log
+lib/Cake/Console/Templates/skel/tmp/sessions/myapp_cake_*
+lib/Cake/Console/Templates/skel/tmp/tests/myapp_cake_*
+
+
