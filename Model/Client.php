@@ -121,6 +121,10 @@ class Client extends OAuthAppModel {
 			return false;
 		}
 
+		if (is_array($data['Client'])) {
+			$this->data['Client'] = array_merge($data['Client'], $this->data['Client']);
+		}
+
 		//You may wish to change this
 		$this->data['Client']['client_id'] = base64_encode(uniqid() . substr(uniqid(), 11, 2));	// e.g. NGYcZDRjODcxYzFkY2Rk (seems popular format)
 		//$this->data['Client']['client_id'] = uniqid();					// e.g. 4f3d4c8602346
