@@ -34,6 +34,17 @@ class OAuthController extends OAuthAppController {
 		parent::beforeFilter();
 		$this->OAuth->authenticate = array('fields' => array('username' => 'email'));
 		$this->Security->blackHoleCallback = 'blackHole';
+		
+		// allow publicly available actions
+		$this->configureAllowedActions();
+		
+	}
+
+	protected function configureAllowedActions() {
+		$allowedActions = array('login', 'blackHole', 'authorize', 'token');
+
+		$this->Auth->allow($allowedActions);
+		$this->OAuth->allow($allowedActions);
 	}
 
 /**

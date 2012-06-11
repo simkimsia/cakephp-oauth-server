@@ -388,10 +388,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  * @return mixed array of client credentials if valid, false if not
  */
 	public function checkClientCredentials($client_id, $client_secret = NULL) {
-		$conditions = array('client_id' => $client_id);
-		if ($client_secret) {
-			$conditions['client_secret'] = self::hash($client_secret);
-		}
+		$conditions = array('client_id' => $client_id, 'client_secret' => $client_secret);
 		$client = $this->Client->find('first', array(
 		    'conditions' => $conditions,
 		    'recursive' => -1
@@ -434,7 +431,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public function getAccessToken($oauth_token) {
 		$accessToken = $this->AccessToken->find('first', array(
-		    'conditions' => array('oauth_token' => self::hash($oauth_token)),
+			'conditions' => array('oauth_token' => $oauth_token),
 		    'recursive' => -1,
 		));
 		if ($accessToken) {
@@ -490,7 +487,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public function getRefreshToken($refresh_token) {
 		$refreshToken = $this->RefreshToken->find('first', array(
-		    'conditions' => array('refresh_token' => self::hash($refresh_token)),
+			'conditions' => array('refresh_token' => $refresh_token),
 		    'recursive' => -1
 		));
 		if ($refreshToken) {
@@ -569,7 +566,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public function getAuthCode($code) {
 		$authCode = $this->AuthCode->find('first', array(
-		    'conditions' => array('code' => self::hash($code)),
+		    'conditions' => array('code' => $code),
 		    'recursive' => -1
 		));
 		if ($authCode) {
