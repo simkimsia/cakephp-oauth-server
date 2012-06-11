@@ -138,7 +138,7 @@ class Client extends OAuthAppModel {
  */
 	public function newClientSecret() {
 		$length = 40;
-		$chars = '@#!%*+/-=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+		$chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 		$str = '';
 		$count = strlen($chars);
 		while ($length--) {
