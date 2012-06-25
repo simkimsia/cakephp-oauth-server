@@ -114,7 +114,7 @@ class OAuthController extends OAuthAppController {
 
 			//Attempted login
 			if ($this->Auth->login()) {
-				$this->log('login post');
+				
 				//Write this to session so we can log them out after authenticating
 				$this->Session->write('OAuth.logout', true);
 				
@@ -157,20 +157,12 @@ class OAuthController extends OAuthAppController {
 		
 		$inputData = NULL;
 		
-		if ($this->request->is('json') || $this->request->is('post')) {
+		if ($this->request->is('post')) {
 			$inputData = $this->request->data;
-			$this->log('post or json');
-			$this->log($this->request->is('json') . ' json');
-			$this->log($this->request->is('post') . ' post');
-			$this->log($this->request->data);
 		} else if ($this->request->is('get')) {
-			$this->log($this->request->is('get') . ' get');
 			$inputData = $this->request->query;
 		}
 
-		
-		
-		
 		$this->layout = null;
 		
 		try {
@@ -208,9 +200,6 @@ class OAuthController extends OAuthAppController {
  */
 	public function blackHole($type) {
 		$this->blackHoled = $type;
-		$this->log('inside blackhole we see the type ' . $type);
-		$this->log('inside blackhole we see the request data');
-		$this->log($this->request->data);
 		if ($type != 'auth') {
 			if (isset($this->request->data['_Token'])) {
 				//Probably our form

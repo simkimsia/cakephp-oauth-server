@@ -194,25 +194,19 @@ class OAuth20Authenticate extends BaseAuthenticate {
 		$user = false;
 		$this->addDetectors($request);
 		
-		$this->OAuth->log('getUser');
-		
 		if ($request->is('oauth_token_grant_password')) {
-					$this->OAuth->log('oauth token password');
 			$user = $this->_findUserForResourceOwnerCredentialsGrant($request);
 		}
 		
 		else if ($request->is('oauth_token_grant_authorization_code')) {
-								$this->OAuth->log('oauth token auth code');
 			$user = $this->_findUserForAuthorizationGrant($request);
 		}
 		
 		else if ($request->is('oauth_token_grant_refresh_token')) {
-								$this->OAuth->log('oauth token refresh');
 			$user = $this->_findUserForRefreshGrant($request);
 		}
 		
 		else {
-								$this->OAuth->log('oauth access token');
 			$user = $this->_findUserByAccessToken($request);
 		}		
 		
