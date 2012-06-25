@@ -18,7 +18,7 @@ App::uses('OAuthAppController', 'OAuth.Controller');
  */
 class OAuthController extends OAuthAppController {
 	
-	public $components = array('OAuth.OAuth', 'Auth', 'Session', 'Security');
+	public $components = array();
 
 	public $uses = array('Users');
 
@@ -32,7 +32,7 @@ class OAuthController extends OAuthAppController {
  */
 	public function beforeFilter() {
 		parent::beforeFilter();
-		$this->OAuth->authenticate = array('fields' => array('username' => 'email'));
+		
 		$this->Security->blackHoleCallback = 'blackHole';
 		
 		// allow publicly available actions
@@ -44,7 +44,6 @@ class OAuthController extends OAuthAppController {
 		$allowedActions = array('login', 'blackHole', 'authorize', 'token');
 
 		$this->Auth->allow($allowedActions);
-		$this->OAuth->allow($allowedActions);
 	}
 
 /**
@@ -65,6 +64,8 @@ class OAuthController extends OAuthAppController {
 		}
 		
 		if ($this->request->is('post')) {
+			
+			
 			$this->validateRequest();
 
 			$userId = $this->Auth->user('id');
@@ -113,6 +114,7 @@ class OAuthController extends OAuthAppController {
 
 			//Attempted login
 			if ($this->Auth->login()) {
+				$this->log('login post');
 				//Write this to session so we can log them out after authenticating
 				$this->Session->write('OAuth.logout', true);
 				
@@ -152,8 +154,27 @@ class OAuthController extends OAuthAppController {
  */
 	public function token(){
 		$this->autoRender = false;
+		
+		$inputData = NULL;
+		
+		if ($this->request->is('json') || $this->request->is('post')) {
+			$inputData = $this->request->data;
+			$this->log('post or json');
+			$this->log($this->request->is('json') . ' json');
+			$this->log($this->request->is('post') . ' post');
+			$this->log($this->request->data);
+		} else if ($this->request->is('get')) {
+			$this->log($this->request->is('get') . ' get');
+			$inputData = $this->request->query;
+		}
+
+		
+		
+		
+		$this->layout = null;
+		
 		try {
-			$this->OAuth->grantAccessToken();
+			$this->OAuth->grantAccessToken($inputData);
 		} catch (OAuth2ServerException $e) {
 			$e->sendHttpResponse();
 		}
@@ -187,7 +208,9 @@ class OAuthController extends OAuthAppController {
  */
 	public function blackHole($type) {
 		$this->blackHoled = $type;
-
+		$this->log('inside blackhole we see the type ' . $type);
+		$this->log('inside blackhole we see the request data');
+		$this->log($this->request->data);
 		if ($type != 'auth') {
 			if (isset($this->request->data['_Token'])) {
 				//Probably our form
