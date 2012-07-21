@@ -18,7 +18,7 @@ App::uses('OAuthAppController', 'OAuth.Controller');
  */
 class OAuthController extends OAuthAppController {
 	
-	public $components = array('OAuth.OAuth', 'Auth', 'Session', 'Security');
+	public $components = array();
 
 	public $uses = array('Users');
 
@@ -32,8 +32,18 @@ class OAuthController extends OAuthAppController {
  */
 	public function beforeFilter() {
 		parent::beforeFilter();
-		$this->OAuth->authenticate = array('fields' => array('username' => 'email'));
+		
 		$this->Security->blackHoleCallback = 'blackHole';
+		
+		// allow publicly available actions
+		$this->configureAllowedActions();
+		
+	}
+
+	protected function configureAllowedActions() {
+		$allowedActions = array('login', 'blackHole', 'authorize', 'token');
+
+		$this->Auth->allow($allowedActions);
 	}
 
 /**
@@ -54,6 +64,8 @@ class OAuthController extends OAuthAppController {
 		}
 		
 		if ($this->request->is('post')) {
+			
+			
 			$this->validateRequest();
 
 			$userId = $this->Auth->user('id');
@@ -102,6 +114,7 @@ class OAuthController extends OAuthAppController {
 
 			//Attempted login
 			if ($this->Auth->login()) {
+				
 				//Write this to session so we can log them out after authenticating
 				$this->Session->write('OAuth.logout', true);
 				
@@ -141,8 +154,19 @@ class OAuthController extends OAuthAppController {
  */
 	public function token(){
 		$this->autoRender = false;
+		
+		$inputData = NULL;
+		
+		if ($this->request->is('post')) {
+			$inputData = $this->request->data;
+		} else if ($this->request->is('get')) {
+			$inputData = $this->request->query;
+		}
+
+		$this->layout = null;
+		
 		try {
-			$this->OAuth->grantAccessToken();
+			$this->OAuth->grantAccessToken($inputData);
 		} catch (OAuth2ServerException $e) {
 			$e->sendHttpResponse();
 		}
@@ -176,7 +200,6 @@ class OAuthController extends OAuthAppController {
  */
 	public function blackHole($type) {
 		$this->blackHoled = $type;
-
 		if ($type != 'auth') {
 			if (isset($this->request->data['_Token'])) {
 				//Probably our form

@@ -37,51 +37,6 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
 	public $AccessToken;
 
 /**
- * Array of allowed actions 
- * 
- * @var array
- */
-	protected $allowedActions = array('token', 'authorize', 'login');
-
-/**
- * An array containing the model and fields to authenticate users against
- * 
- * Inherits theses defaults:
- * 
- * $this->OAuth->authenticate = array(
- *	'userModel' => 'User',
- *	'fields' => array(
- *		'username' => 'username',
- *		'password' => 'password'
- *	)
- * );
- * 
- * Which can be overridden in your beforeFilter:
- * 
- * $this->OAuth->authenticate = array(
- *	'fields' => array(
- *		'username' => 'email'
- *	)
- * );
- * 
- * 
- * $this->OAuth->authenticate
- * 
- * @var array 
- */
-	public $authenticate;
-
-/**
- * Defaults for $authenticate
- * 
- * @var array 
- */
-	protected $_authDefaults = array(
-	    'userModel' => 'User',
-	    'fields' => array('username' => 'username', 'password' => 'password')
-	    );
-
-/**
  * AuthCode object.
  *
  * @var object
@@ -95,15 +50,6 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public $Client;
 
-/**
- * Array of globally supported grant types
- * 
- * By default = array('authorization_code', 'refresh_token', 'password');
- * Other grant mechanisms are not supported in the current release
- * 
- * @var array
- */
-	public $grantTypes = array('authorization_code', 'refresh_token', 'password');
 /**
 * OAuth2 Object
 * 
@@ -119,18 +65,33 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
 	public $RefreshToken;
 	
 /**
- * User object
- * 
+ * RefreshToken object.
+ *
  * @var object
  */
 	public $User;
-
+	
+	
 /**
- * Static storage for current user
- * 
- * @var array 
+ * Settings for this object.
+ *
+ * - `fields` The fields to use to identify a user by.
+ * - `userModel` The model name of the User, defaults to User.
+ * - `scope` Additional conditions to use when looking up and authenticating users,
+ *    i.e. `array('User.is_active' => 1).`
+ * - `endpoints` List of actions responsible for the 4 basic ENDPOINTS for granting tokens, authorizing, and logging in/out
+ *
+ * @var array
  */
-	protected $_user = false;
+	public $settings = array(
+		'fields' => array(
+			'username' => 'username',
+			'password' => 'password'
+		),
+		'userModel' => 'User',
+		'scope' => array(),
+	);
+	
 
 
 	
@@ -146,6 +107,8 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
 		$this->AuthCode = ClassRegistry::init(array('class' => 'OAuth.AuthCode', 'alias' => 'AuthCode'));
 		$this->Client = ClassRegistry::init(array('class' => 'OAuth.Client', 'alias' => 'Client'));
 		$this->RefreshToken = ClassRegistry::init(array('class' => 'OAuth.RefreshToken', 'alias' => 'RefreshToken'));
+		$this->settings = Set::merge($this->settings, $settings);
+		$this->User = ClassRegistry::init($this->settings['userModel']);
 	}
 
 /**
@@ -156,41 +119,11 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  * @param type $controller
  * @return boolean 
  */
-	public function startup($controller) {
+	public function startup(Controller $controller) {
 		$request = $controller->request;
 		$methods = array_flip($controller->methods);
 		$action = $request->params['action'];
 
-		$this->authenticate = Set::merge($this->_authDefaults, $this->authenticate);
-		$this->User = ClassRegistry::init(array(
-		    'class' => $this->authenticate['userModel'],
-		    'alias' => $this->authenticate['userModel']
-			));
-
-		$isMissingAction = (
-			$controller->scaffold === false &&
-			!isset($methods[$action])
-		);
-		if ($isMissingAction) {
-			return true;
-		}
-
-		$allowedActions = $this->allowedActions;
-		$isAllowed = (
-			$this->allowedActions == array('*') ||
-			in_array($action, $allowedActions)
-		);
-		if ($isAllowed) {
-			return true;
-		}
-
-		try {
-			$this->isAuthorized();
-			$this->user(null, $this->AccessToken->id);
-		} catch (OAuth2AuthenticateException $e) {
-			$e->sendHttpResponse();
-			return false;
-		}
 		return true;
 	}
 
@@ -200,126 +133,17 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  * @see OAuth2::getBearerToken()
  * @see OAuth2::verifyAccessToken()
  *
- * @return boolean true if carrying valid token, false if not
+ * @return mixed Return bearer token if carrying valid token, false if not
  */
-	public function isAuthorized() {
+	public function validateAccessToken() {
+		$token = false;
 		try {
-			$this->AccessToken->id = $this->getBearerToken();
-			$this->verifyAccessToken($this->AccessToken->id);
+			$token = $this->getBearerToken();
+			$this->verifyAccessToken($token);
 		} catch (OAuth2AuthenticateException $e) {
 			return false;
 		}
-		return true;
-	}
-
-/**
- * Takes a list of actions in the current controller for which authentication is not required, or
- * no parameters to allow all actions.
- *
- * You can use allow with either an array, or var args.
- *
- * `$this->OAuth->allow(array('edit', 'add'));` or
- * `$this->OAuth->allow('edit', 'add');`
- * `$this->OAuth->allow();` to allow all actions.
- *
- * allow() also supports '*' as a wildcard to mean all actions.
- *
- * `$this->OAuth->allow('*');`
- *
- * @param mixed $action,... Controller action name or array of actions
- * @return void
- */
-	public function allow($action = null) {
-		$args = func_get_args();
-		if (empty($args) || $args == array('*')) {
-			$this->allowedActions = $this->_methods;
-		} else {
-			if (isset($args[0]) && is_array($args[0])) {
-				$args = $args[0];
-			}
-			$this->allowedActions = array_merge($this->allowedActions, $args);
-		}
-	}
-
-/**
- * Removes items from the list of allowed/no authentication required actions.
- *
- * You can use deny with either an array, or var args.
- *
- * `$this->OAuth->deny(array('edit', 'add'));` or
- * `$this->OAuth->deny('edit', 'add');` or
- * `$this->OAuth->deny();` to remove all items from the allowed list
- *
- * @param mixed $action,... Controller action name or array of actions
- * @return void
- * @see OAuthComponent::allow()
- */
-	public function deny($action = null) {
-		$args = func_get_args();
-		if (empty($args)) {
-			$this->allowedActions = array();
-		} else {
-			if (isset($args[0]) && is_array($args[0])) {
-				$args = $args[0];
-			}
-			foreach ($args as $arg) {
-				$i = array_search($arg, $this->allowedActions);
-				if (is_int($i)) {
-					unset($this->allowedActions[$i]);
-				}
-			}
-			$this->allowedActions = array_values($this->allowedActions);
-		}
-	}
-/**
- * Gets the user associated to the current access token.
- * 
- * Will return array of all user fields by default
- * You can specify specific fields like so:
- *
- * $id = $this->OAuth->user('id');
- * 
- * @param type $field
- * @return mixed array of user fields if $field is blank, string value if $field is set and $fields is avaliable, false on failure 
- */
-	public function user($field = null, $token = null) {
-		if ($this->_user) {
-			return $this->_user;
-		} else {
-			$this->AccessToken->bindModel(array(
-			    'belongsTo' => array(
-				'User' => array(
-				    'className' => $this->authenticate['userModel'],
-				    'foreignKey' => 'user_id'
-				    )
-				)
-			    ));
-			$token = empty($token) ? $this->getBearerToken() : $token;
-			$data = $this->AccessToken->find('first', array(
-				'conditions' => array('oauth_token' => self::hash($token)),
-				'recursive' => 1
-			));
-			if (!$data) {
-				return false;
-			}
-			$this->_user = $data['User'];
-		}
-		if (empty($field)) {
-			return $this->_user;
-		} elseif (isset($this->_user[$field])) {
-			return $this->_user[$field];
-		}
-		return false;
-	}
-
-/**
- * Convenience function for hashing client_secret (or whatever else)
- * 
- * @param string $password
- * @return string Hashed password 
- */
-	public static function hash($password) {
-		return Security::hash($password, null, true);
+		return $token;
 	}
 
 /**
@@ -388,10 +212,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  * @return mixed array of client credentials if valid, false if not
  */
 	public function checkClientCredentials($client_id, $client_secret = NULL) {
-		$conditions = array('client_id' => $client_id);
-		if ($client_secret) {
-			$conditions['client_secret'] = self::hash($client_secret);
-		}
+		$conditions = array('client_id' => $client_id, 'client_secret' => $client_secret);
 		$client = $this->Client->find('first', array(
 		    'conditions' => $conditions,
 		    'recursive' => -1
@@ -434,7 +255,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public function getAccessToken($oauth_token) {
 		$accessToken = $this->AccessToken->find('first', array(
-		    'conditions' => array('oauth_token' => self::hash($oauth_token)),
+			'conditions' => array('oauth_token' => $oauth_token),
 		    'recursive' => -1,
 		));
 		if ($accessToken) {
@@ -477,7 +298,17 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  * @return boolean If grant type is availiable to client
  */
 	public function checkRestrictedGrantType($client_id, $grant_type) {
-		return in_array($grant_type, $this->grantTypes);
+		$OAuth2 = $this->OAuth2;
+		switch ($grant_type) {
+			case $OAuth2::GRANT_TYPE_AUTH_CODE :
+				return true;
+			case $OAuth2::GRANT_TYPE_USER_CREDENTIALS :
+				return true;
+			case $OAuth2::GRANT_TYPE_REFRESH_TOKEN :
+				return true;
+		}
+		
+		return false;
 	}
 
 /**
@@ -490,7 +321,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public function getRefreshToken($refresh_token) {
 		$refreshToken = $this->RefreshToken->find('first', array(
-		    'conditions' => array('refresh_token' => self::hash($refresh_token)),
+			'conditions' => array('refresh_token' => $refresh_token),
 		    'recursive' => -1
 		));
 		if ($refreshToken) {
@@ -548,8 +379,8 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
 	public function checkUserCredentials($client_id, $username, $password) {
 		$user = $this->User->find('first', array(
 		   'conditions' => array(
-		       $this->authenticate['fields']['username'] => $username,
-		       $this->authenticate['fields']['password'] => AuthComponent::password($password)
+		       $this->settings['fields']['username'] => $username,
+		       $this->settings['fields']['password'] => AuthComponent::password($password)
 			),
 		    'recursive' => -1
 		));
@@ -569,7 +400,7 @@ class OAuthComponent extends Component implements IOAuth2Storage, IOAuth2Refresh
  */
 	public function getAuthCode($code) {
 		$authCode = $this->AuthCode->find('first', array(
-		    'conditions' => array('code' => self::hash($code)),
+		    'conditions' => array('code' => $code),
 		    'recursive' => -1
 		));
 		if ($authCode) {

@@ -111,7 +111,7 @@ class Client extends OAuthAppModel {
 	public function add($data = null) {
 		$this->data['Client'] = array();
 
-		if (is_array($data['Client']) && array_key_exists('redirect_uri', $data['Client'])) {
+		if (is_array($data) && is_array($data['Client']) && array_key_exists('redirect_uri', $data['Client'])) {
 			$this->data['Client']['redirect_uri'] = $data['Client']['redirect_uri'];
 		} elseif (is_string($data)){
 			$this->data['Client']['redirect_uri'] = $data;
@@ -142,25 +142,119 @@ class Client extends OAuthAppModel {
 /**
  * Create a new, pretty (as in moderately, not beautiful - that can't be guaranteed ;-) random client secret
  *
- * @return string
+ * @return string The client secret is plaintext
  */
-	public function newClientSecret() {
-		$length = 40;
-		$chars = '@#!%*+/-=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-		$str = '';
-		$count = strlen($chars);
-		while ($length--) {
-			$str .= $chars[mt_rand(0, $count - 1)];
-		}
-		return OAuthComponent::hash($str);
-	}
-	
+	public function newClientSecret($length = 40, $options = array()) {
+		// initialize variables
+		$password 	= "";
+		$i 			= 0;
+        $possible 	= '';
 
-	public function beforeSave($options = array()) {
-		$this->data['Client']['client_secret'] = OAuthComponent::hash($this->data['Client']['client_secret']);
-		return true;
+        $numerals = '0123456789';
+        $lowerAlphabet = 'abcdefghijklmnopqrstuvwxyz';
+        $upperAlphabet = strtoupper($lowerAlphabet);
+
+        $defaultOptions = array(
+			'type'=>'alphanumeric', // possible values alphabets, numbers, upperalpha, loweralpha, alphanumeric, possible,
+			'allow_repeat_characters' => false,
+			'possible' => ''
+		);
+
+        $options = array_merge($defaultOptions, $options);
+		$possible = '';
+
+		switch($options['type']) {
+			case 'alphabets' :
+				$possible = $lowerAlphabet . $upperAlphabet;
+			break;
+			case 'numbers' :
+				$possible = $numerals;
+			break;
+			case 'upperalpha' :
+				$possible = $upperAlphabet;
+			break;
+			case 'loweralpha' :
+				$possible = $lowerAlphabet;
+			break;
+			case 'possible' :
+				if (isset($options['possible']) && !empty($options['possible']) && is_string($options['possible'])) {
+					$possible = $options['possible'];
+				} else {
+					$possible = $numerals . $lowerAlphabet . $upperAlphabet;
+				}
+			break;
+			default :
+				$possible = $numerals . $lowerAlphabet . $upperAlphabet;
+			break;
+		}
+
+
+		
+		
+		/**
+		 * 3 situations
+		 * situation 1 if we disallow repeat:
+		 * we need to allow repeat characters once the length of random string required is more than 20% of possible keyspace
+		 * e.g. 20% of alphanumeric aka 62 characters is 12.4 so if 13 char long is required, we switch to allow repeat
+		 * situation 2 will then apply.
+		 *
+		 * situation 2 if we allow repeat:
+		 * any single character must not show up more than 5% of the time round up
+		 * e.g. length needed is 45, 5% of 45 is 2.25 rounded to 3.
+		 * e.g. length needed is 40, 5% of 40 is 2 stay as 2.
+		 *
+		 * situation 3 if keyspace length greater than required length
+		 * if length of keyspace is less than random string length, we allow repeat characters up to lengthOverKeySpaceRatio rounded up
+		 * e.g., length needed is 200 keyspace is 62, then 200 / 62 = 3.22, we allow single characters appear up to 4 times
+		 **/
+		
+		
+		// length of random string needed divided by total possible characters to be used
+		$keyspaceLength = strlen($possible);
+		$lengthOverKeySpaceRatio = floatval($length) / floatval($keyspaceLength);
+		$appearancesAllowed = 1; // default value means no repeats
+
+		// for situation 1
+		if ($options['allow_repeat_characters'] == false && $lengthOverKeySpaceRatio > 0.2) {
+			$options['allow_repeat_characters'] = true;
+		}
+		
+		// for situation 2
+		if ($options['allow_repeat_characters']) {
+			$appearancesAllowed = ceil(0.05 * $length);
+		}
+
+		// for situation 3
+		if ($lengthOverKeySpaceRatio > 1.0) {
+			$options['allow_repeat_characters'] = true;
+			$appearancesAllowed = ceil($lengthOverKeySpaceRatio);
+		}
+
+
+		// add random characters to $password until $length is reached
+		while ($i < $length) {
+			// pick a random character from the possible ones
+			$char = substr($possible, mt_rand(0, strlen($possible)-1), 1);
+
+			// we don't want this character show up more than necessary 
+			// and we don't want two same characters show up back to back
+			$appearances = substr_count($password, $char);
+			$lastCharacter = substr($password, -1);
+			if ($appearances < $appearancesAllowed && $char != $lastCharacter) {
+				$password .= $char;
+				$i++;
+			}
+		}
+		return $password;
 	}
-	
+
+	/**
+	 *
+	 * Set the client_secret back into the $this->data after a successful save
+	 *
+	 * @param $created Boolean that is true for new Client record
+	 * @return Boolean True if successful
+	 */
 	public function afterSave($created) {
 		if ($this->addClientSecret) {
 			$this->data['Client']['client_secret'] = $this->addClientSecret;

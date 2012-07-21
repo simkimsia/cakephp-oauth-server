@@ -65,13 +65,4 @@ class AccessToken extends OAuthAppModel {
 		)
 	);
 
-/**
- * beforeSave method to hash tokens before saving
- * 
- * @return boolean 
- */
-	public function beforeSave($options = array()) {
-		$this->data['AccessToken']['oauth_token'] = OAuthComponent::hash($this->data['AccessToken']['oauth_token']);
-		return true;
-	}
 }

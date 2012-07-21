@@ -65,13 +65,4 @@ class RefreshToken extends OAuthAppModel {
 		)
 	);
 
-/**
- * beforeSave method to hash tokens before saving
- * 
- * @return boolean 
- */
-	public function beforeSave($options = array()) {
-		$this->data['RefreshToken']['refresh_token'] = OAuthComponent::hash($this->data['RefreshToken']['refresh_token']);
-		return true;
-	}
 }
