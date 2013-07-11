@@ -118,11 +118,7 @@ class Client extends OAuthAppModel {
 		} else {
 			return false;
 		}
-		
-		/**
-		 * in case you have additional fields in the clients table such as name, description etc
-		 * and you are using $data['Client']['name'], etc to save
-		 **/
+
 		if (is_array($data['Client'])) {
 			$this->data['Client'] = array_merge($data['Client'], $this->data['Client']);
 		}
